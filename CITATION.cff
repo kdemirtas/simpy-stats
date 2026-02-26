@@ -6,7 +6,7 @@ authors:
   - given-names: Kerem
     family-names: Demirtas
     email: keremdemirtas@gmail.com
-    orcid: ""
+    orcid: "https://orcid.org/0000-0002-7458-5350"
 repository-code: "https://github.com/kdemirtas/simpy-stats"
 url: "https://pypi.org/project/simpy-stats/"
 abstract: >-
