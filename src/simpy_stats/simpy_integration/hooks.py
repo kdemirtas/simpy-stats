@@ -23,7 +23,7 @@ def attach_resource_monitors(
     resource:
         A :class:`simpy.Resource` instance (not yet started / partially used).
     stats:
-        A :class:`~simpy_stats.StatScope` (or any object with a
+        A :class:`~simpy_stats.Stats` (or any object with a
         ``level(name)`` factory method).
     prefix:
         Metric name prefix (default ``"server"``).

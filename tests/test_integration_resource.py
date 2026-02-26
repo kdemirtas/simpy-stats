@@ -28,7 +28,7 @@ def _simple_server_sim(env, stats, capacity=1):
 class TestMonitoredResource:
     def test_queue_and_service_levels_created(self):
         env = simpy.Environment()
-        stats = simpy_stats.StatScope(env)
+        stats = simpy_stats.Stats(env)
         _simple_server_sim(env, stats)
         env.run()
         assert "server.queue_len" in stats.levels
@@ -36,7 +36,7 @@ class TestMonitoredResource:
 
     def test_in_service_time_mean(self):
         env = simpy.Environment()
-        stats = simpy_stats.StatScope(env)
+        stats = simpy_stats.Stats(env)
         _simple_server_sim(env, stats)
         env.run(until=10)
         snap = stats.finalize()
@@ -65,7 +65,7 @@ class TestMonitoredResource:
 class TestAttachResourceMonitors:
     def test_basic_attach(self):
         env = simpy.Environment()
-        stats = simpy_stats.StatScope(env)
+        stats = simpy_stats.Stats(env)
         resource = simpy.Resource(env, capacity=1)
         monitors = attach_resource_monitors(resource, stats, prefix="srv")
 
@@ -74,7 +74,7 @@ class TestAttachResourceMonitors:
 
     def test_utilization_tracked(self):
         env = simpy.Environment()
-        stats = simpy_stats.StatScope(env)
+        stats = simpy_stats.Stats(env)
         resource = simpy.Resource(env, capacity=1)
         attach_resource_monitors(resource, stats, prefix="srv")
 

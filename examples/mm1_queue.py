@@ -17,7 +17,7 @@ import random
 import simpy
 
 import simpy_stats
-from simpy_stats import ReplicationRunner, StatScope, summary_table
+from simpy_stats import ReplicationRunner, Stats, summary_table
 
 
 # ---------------------------------------------------------------------------
@@ -33,7 +33,7 @@ def mm1_rep(seed: int) -> simpy_stats.Snapshot:
     """Run one M/M/1 replication and return a Snapshot."""
     rng = random.Random(seed)
     env = simpy.Environment()
-    stats = StatScope(env)
+    stats = Stats(env)
 
     wait_time = stats.tally("wait_time")
     queue_len = stats.level("queue_len", initial=0)

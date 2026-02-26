@@ -19,7 +19,7 @@ class MonitoredStore(simpy.Store):
     capacity:
         Maximum number of items (default unlimited).
     stats:
-        A :class:`~simpy_stats.StatScope`.
+        A :class:`~simpy_stats.Stats`.
     prefix:
         Prefix for metric names (default ``"store"``).
     """

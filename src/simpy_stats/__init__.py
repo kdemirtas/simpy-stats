@@ -6,7 +6,7 @@ Quick start::
     import simpy_stats
 
     env = simpy.Environment()
-    stats = simpy_stats.StatScope(env)
+    stats = simpy_stats.Stats(env)
 
     wait = stats.tally("wait")
     arrivals = stats.counter("arrivals")
@@ -42,7 +42,7 @@ __all__ = [
     "Level",
     "Welford",
     # Scope
-    "StatScope",
+    "Stats",
     # Reporting
     "Snapshot",
     "summary_table",
@@ -58,7 +58,7 @@ __all__ = [
 __version__ = "0.1.0"
 
 
-class StatScope:
+class Stats:
     """Factory and registry for all statistics in a single simulation run.
 
     Parameters
@@ -151,7 +151,7 @@ class StatScope:
 
     def __repr__(self) -> str:
         return (
-            f"StatScope("
+            f"Stats("
             f"tallies={list(self._tallies)}, "
             f"counters={list(self._counters)}, "
             f"levels={list(self._levels)})"

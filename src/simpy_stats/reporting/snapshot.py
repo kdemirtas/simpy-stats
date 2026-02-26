@@ -14,7 +14,7 @@ class Snapshot:
     Parameters
     ----------
     metrics:
-        Flat ``{str: float}`` dict produced by :class:`StatScope`.
+        Flat ``{str: float}`` dict produced by :class:`Stats`.
     meta:
         Optional metadata (replication index, seed, …).
     """

@@ -23,7 +23,7 @@ import random
 import simpy
 
 import simpy_stats
-from simpy_stats import ReplicationRunner, StatScope, summary_table
+from simpy_stats import ReplicationRunner, Stats, summary_table
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ SIM_TIME = 500.0
 def inventory_rep(seed: int) -> simpy_stats.Snapshot:
     rng = random.Random(seed)
     env = simpy.Environment()
-    stats = StatScope(env)
+    stats = Stats(env)
 
     on_hand = stats.level("on_hand", initial=float(S))
     lost_sales = stats.counter("lost_sales")

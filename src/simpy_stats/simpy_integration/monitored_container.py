@@ -21,7 +21,7 @@ class MonitoredContainer(simpy.Container):
     init:
         Initial fill level (default 0).
     stats:
-        A :class:`~simpy_stats.StatScope`.
+        A :class:`~simpy_stats.Stats`.
     prefix:
         Prefix for metric names (default ``"container"``).
     """

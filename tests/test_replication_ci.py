@@ -139,13 +139,13 @@ class TestReplicationRunner:
 
 
 # ---------------------------------------------------------------------------
-# StatScope integration test
+# Stats integration test
 # ---------------------------------------------------------------------------
 
-class TestStatScope:
+class TestStats:
     def test_full_workflow(self):
         env = simpy.Environment()
-        stats = simpy_stats.StatScope(env)
+        stats = simpy_stats.Stats(env)
         wait = stats.tally("wait")
         arrivals = stats.counter("arrivals")
         queue = stats.level("queue")
@@ -170,6 +170,6 @@ class TestStatScope:
         assert snap["queue.time_mean"] == pytest.approx(1.5)
 
     def test_scope_repr(self):
-        stats = simpy_stats.StatScope()
+        stats = simpy_stats.Stats()
         stats.tally("x")
-        assert "StatScope" in repr(stats)
+        assert "Stats" in repr(stats)

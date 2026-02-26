@@ -7,7 +7,7 @@ Arena-like statistics layer for [SimPy](https://simpy.readthedocs.io/): streamin
 - **`Counter`** — event counts and optional rates
 - **`Tally`** — observation-based streaming mean, variance, min, max (Welford algorithm)
 - **`Level`** — time-weighted average of a piecewise-constant signal (queue length, WIP, utilization)
-- **`StatScope`** — factory + registry: one call per name, `finalize()` → `Snapshot`
+- **`Stats`** — factory + registry: one call per name, `finalize()` → `Snapshot`
 - **`ReplicationRunner`** — independent replications with half-width stopping rules
 - **`ci_t`** — two-sided *t*-based confidence intervals (built-in table; scipy optional)
 - **SimPy integrations** — `MonitoredResource`, `MonitoredStore`, `MonitoredContainer`, `attach_resource_monitors()`
@@ -31,7 +31,7 @@ import simpy
 import simpy_stats
 
 env = simpy.Environment()
-stats = simpy_stats.StatScope(env)
+stats = simpy_stats.Stats(env)
 
 wait = stats.tally("wait_time")
 arrivals = stats.counter("arrivals")
@@ -50,7 +50,7 @@ from simpy_stats import ReplicationRunner
 
 def my_rep(seed: int) -> simpy_stats.Snapshot:
     env = simpy.Environment()
-    stats = simpy_stats.StatScope(env)
+    stats = simpy_stats.Stats(env)
     # ... build and run model ...
     return stats.finalize()
 
@@ -85,7 +85,7 @@ uv run ruff check .   # lint
 
 | | |
 |---|---|
-| M1 | Core stats + StatScope + 70 tests |
+| M1 | Core stats + Stats + 70 tests |
 | M2 | ReplicationRunner + CI / half-width |
 | M3 | MonitoredResource + helpers + examples |
 | M4 | Docs + PyPI release |

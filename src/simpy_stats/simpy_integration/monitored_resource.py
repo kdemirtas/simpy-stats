@@ -26,7 +26,7 @@ class MonitoredResource(simpy.Resource):
     capacity:
         Resource capacity (number of concurrent servers).
     stats:
-        A :class:`~simpy_stats.StatScope` (or any object with a
+        A :class:`~simpy_stats.Stats` (or any object with a
         ``level(name)`` factory method).
     prefix:
         Prefix for metric names (default ``"resource"``).
