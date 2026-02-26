@@ -90,6 +90,22 @@ uv run ruff check .   # lint
 | M3 | MonitoredResource + helpers + examples |
 | M4 | Docs + PyPI release |
 
+## Citation
+
+If you use simpy-stats in academic work, please cite it:
+
+```bibtex
+@software{demirtas2026simpy_stats,
+  author  = {Demirtas, Kerem},
+  title   = {simpy-stats: Arena-like statistics layer for SimPy},
+  year    = {2026},
+  url     = {https://github.com/kdemirtas/simpy-stats},
+  version = {0.1.0}
+}
+```
+
+Or use the **"Cite this repository"** button on the GitHub page (powered by `CITATION.cff`).
+
 ## License
 
 MIT

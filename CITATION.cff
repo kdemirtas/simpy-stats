@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: simpy-stats
+message: "If you use this software, please cite it using the metadata below."
+type: software
+authors:
+  - given-names: Kerem
+    family-names: Demirtas
+    email: keremdemirtas@gmail.com
+    orcid: ""
+repository-code: "https://github.com/kdemirtas/simpy-stats"
+url: "https://pypi.org/project/simpy-stats/"
+abstract: >-
+  Arena-like statistics layer for SimPy: streaming Counter, Tally,
+  and time-weighted Level statistics, replication management, and
+  t-based confidence intervals.
+keywords:
+  - simpy
+  - simulation
+  - statistics
+  - discrete-event simulation
+license: MIT
+version: 0.1.0
+date-released: "2026-02-26"
