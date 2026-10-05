@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from .snapshot import Snapshot
 
 
-def summary_table(obj: "Snapshot | dict", title: str = "") -> str:
+def summary_table(obj: Snapshot | dict, title: str = "") -> str:
     """Return a formatted text table of metrics.
 
     Works with a :class:`Snapshot`, a plain ``{str: float}`` dict, or a

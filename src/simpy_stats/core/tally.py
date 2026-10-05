@@ -68,17 +68,17 @@ class Tally:
 
     @property
     def mean(self) -> float:
-        """Sample mean.  Returns 0.0 when n == 0."""
+        """Sample mean.  NaN when n == 0."""
         return self._welford.mean
 
     @property
     def var(self) -> float:
-        """Sample variance (n-1 denominator).  Returns 0.0 when n < 2."""
+        """Sample variance (n-1 denominator).  NaN when n < 2."""
         return self._welford.var_sample
 
     @property
     def stdev(self) -> float:
-        """Sample standard deviation."""
+        """Sample standard deviation.  NaN when n < 2."""
         return self._welford.stdev_sample
 
     @property

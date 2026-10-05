@@ -2,7 +2,5 @@
 
 from __future__ import annotations
 
-from typing import Union
-
 # Simulation time — either int or float
-SimTime = Union[int, float]
+SimTime = int | float
