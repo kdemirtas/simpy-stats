@@ -4,9 +4,8 @@ import pytest
 import simpy
 
 import simpy_stats
-from simpy_stats.simpy_integration.monitored_resource import MonitoredResource
 from simpy_stats.simpy_integration.hooks import attach_resource_monitors
-
+from simpy_stats.simpy_integration.monitored_resource import MonitoredResource
 
 # ---------------------------------------------------------------------------
 # MonitoredResource
@@ -104,6 +103,7 @@ class TestExport:
 
     def test_to_json(self):
         import json
+
         from simpy_stats.reporting.export import to_json
         snap = simpy_stats.Snapshot({"x": 3.14})
         data = json.loads(to_json(snap))
@@ -177,3 +177,97 @@ def test_attached_monitors_queue_length_counts_only_waiting_requests():
     snap = stats.finalize()
     assert snap["server.queue_len.time_mean"] == pytest.approx(7 / 19)
     assert snap["server.in_service.time_mean"] == pytest.approx(17 / 19)
+
+
+def _one_holder_one_quitter(env, server, leave):
+    """A holder keeps the server for 10; a second customer waits 2 and gives up."""
+
+    def holder():
+        with server.request() as turn:
+            yield turn
+            yield env.timeout(10)
+
+    def quitter():
+        if leave == "with":
+            with server.request() as turn:
+                yield turn | env.timeout(2)
+        else:
+            turn = server.request()
+            yield turn | env.timeout(2)
+            turn.cancel()
+
+    env.process(holder())
+    env.process(quitter())
+    env.run()
+
+
+@pytest.mark.parametrize("leave", ["with", "cancel"])
+@pytest.mark.parametrize("attached", [False, True])
+def test_a_request_that_gives_up_leaves_the_queue_level(leave, attached):
+    env = simpy.Environment()
+    stats = simpy_stats.Stats(env)
+    if attached:
+        server = simpy.Resource(env, capacity=1)
+        simpy_stats.attach_resource_monitors(server, stats, prefix="server")
+    else:
+        server = simpy_stats.MonitoredResource(env, capacity=1, stats=stats, prefix="server")
+    _one_holder_one_quitter(env, server, leave)
+    snap = stats.finalize()
+    assert snap["server.queue_len.time_mean"] == pytest.approx(2 / 10)
+    assert snap["server.in_service.time_mean"] == pytest.approx(1.0)
+
+
+def test_attached_monitors_follow_a_priority_resource():
+    env = simpy.Environment()
+    stats = simpy_stats.Stats(env)
+    server = simpy.PriorityResource(env, capacity=1)
+    simpy_stats.attach_resource_monitors(server, stats, prefix="server")
+    served = []
+
+    def customer(name, arrives, priority):
+        yield env.timeout(arrives)
+        with server.request(priority=priority) as turn:
+            yield turn
+            served.append(name)
+            yield env.timeout(4)
+
+    env.process(customer("first", 0, 0))
+    env.process(customer("low", 1, 5))
+    env.process(customer("high", 2, 1))
+    env.run()
+    snap = stats.finalize()
+    assert served == ["first", "high", "low"]
+    # low waits from 1 to 8, high from 2 to 4: 9 customer-minutes over 12 minutes
+    assert snap["server.queue_len.time_mean"] == pytest.approx(9 / 12)
+    assert snap["server.in_service.time_mean"] == pytest.approx(1.0)
+
+
+def test_attached_monitors_follow_a_preemptive_resource():
+    env = simpy.Environment()
+    stats = simpy_stats.Stats(env)
+    server = simpy.PreemptiveResource(env, capacity=1)
+    simpy_stats.attach_resource_monitors(server, stats, prefix="server")
+
+    def low():
+        with server.request(priority=5) as turn:
+            yield turn
+            try:
+                yield env.timeout(10)
+            except simpy.Interrupt:
+                pass
+
+    def high():
+        yield env.timeout(3)
+        with server.request(priority=1) as turn:
+            yield turn
+            yield env.timeout(4)
+
+    env.process(low())
+    env.process(high())
+    env.run()
+    snap = stats.finalize()
+    # the abandoned timeout of the preempted user keeps the run going to 10;
+    # the server is in use from 0 to 7
+    assert env.now == 10
+    assert snap["server.queue_len.time_mean"] == pytest.approx(0.0)
+    assert snap["server.in_service.time_mean"] == pytest.approx(7 / 10)

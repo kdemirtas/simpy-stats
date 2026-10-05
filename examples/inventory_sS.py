@@ -25,7 +25,6 @@ import simpy
 import simpy_stats
 from simpy_stats import ReplicationRunner, Stats, summary_table
 
-
 # ---------------------------------------------------------------------------
 # Parameters
 # ---------------------------------------------------------------------------

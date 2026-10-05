@@ -23,7 +23,13 @@ class Welford:
     # ------------------------------------------------------------------
 
     def update(self, x: float) -> None:
-        """Incorporate a new observation *x* into the running statistics."""
+        """Incorporate a new observation *x* into the running statistics.
+
+        Raises :exc:`ValueError` for NaN or infinity: one such value would
+        turn the mean and the variance into NaN for good.
+        """
+        if not math.isfinite(x):
+            raise ValueError(f"observation must be a finite number, got {x!r}")
         self._n += 1
         delta = x - self._mean
         self._mean += delta / self._n
@@ -41,7 +47,9 @@ class Welford:
 
     @property
     def mean(self) -> float:
-        """Running mean.  Returns 0.0 when n == 0."""
+        """Running mean.  NaN when n == 0: no observation, no mean."""
+        if self._n == 0:
+            return math.nan
         return self._mean
 
     @property
@@ -51,16 +59,16 @@ class Welford:
 
     @property
     def var_sample(self) -> float:
-        """Sample variance (denominator n-1).  Returns 0.0 when n < 2."""
+        """Sample variance (denominator n-1).  NaN when n < 2."""
         if self._n < 2:
-            return 0.0
+            return math.nan
         return self._m2 / (self._n - 1)
 
     @property
     def var_pop(self) -> float:
-        """Population variance (denominator n).  Returns 0.0 when n == 0."""
+        """Population variance (denominator n).  NaN when n == 0."""
         if self._n == 0:
-            return 0.0
+            return math.nan
         return self._m2 / self._n
 
     @property
@@ -78,4 +86,4 @@ class Welford:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
-        return f"Welford(n={self._n}, mean={self._mean:.6g}, stdev={self.stdev_sample:.6g})"
+        return f"Welford(n={self._n}, mean={self.mean:.6g}, stdev={self.stdev_sample:.6g})"

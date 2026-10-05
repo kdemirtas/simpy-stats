@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 
 class TimeIntegral:
     """Accumulate the time-weighted area under a piecewise-constant step function.
@@ -91,7 +93,8 @@ class TimeIntegral:
             elapsed = t_end - self._start_time
 
         if elapsed == 0.0:
-            return self._last_value
+            # A window of no length has no time average.
+            return math.nan
         return total_area / elapsed
 
     def __repr__(self) -> str:

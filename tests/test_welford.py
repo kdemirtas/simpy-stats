@@ -11,11 +11,11 @@ from simpy_stats.core.welford import Welford
 def test_empty():
     w = Welford()
     assert w.n == 0
-    assert w.mean == 0.0
+    assert math.isnan(w.mean)
     assert w.m2 == 0.0
-    assert w.var_sample == 0.0
-    assert w.var_pop == 0.0
-    assert w.stdev_sample == 0.0
+    assert math.isnan(w.var_sample)
+    assert math.isnan(w.var_pop)
+    assert math.isnan(w.stdev_sample)
 
 
 def test_single_observation():
@@ -23,7 +23,7 @@ def test_single_observation():
     w.update(5.0)
     assert w.n == 1
     assert w.mean == pytest.approx(5.0)
-    assert w.var_sample == 0.0  # n<2
+    assert math.isnan(w.var_sample)  # n<2
 
 
 def test_known_sequence():
@@ -74,3 +74,13 @@ def test_large_sequence_stability():
         w.update(x)
     assert w.mean == pytest.approx(statistics.mean(data), rel=1e-6)
     assert w.stdev_sample == pytest.approx(statistics.stdev(data), rel=1e-4)
+
+
+@pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf])
+def test_a_non_finite_observation_is_refused(bad):
+    w = Welford()
+    w.update(1.0)
+    with pytest.raises(ValueError):
+        w.update(bad)
+    assert w.n == 1
+    assert w.mean == 1.0

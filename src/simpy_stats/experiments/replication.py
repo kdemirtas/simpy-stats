@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import random
+import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from ..reporting.snapshot import Snapshot
 from .ci import ci_t
-
 
 # ---------------------------------------------------------------------------
 # ReplicationReport
@@ -162,7 +161,7 @@ class ReplicationRunner:
                 stop_reason = "precision reached"
                 break
 
-        return self._build_report(snapshots, stop_reason=stop_reason)
+        return self._build_report(snapshots, stop_reason=stop_reason, alpha=alpha)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -172,7 +171,10 @@ class ReplicationRunner:
     def _collect_values(
         snapshots: list[Snapshot], metric: str
     ) -> list[float]:
-        return [s[metric] for s in snapshots if metric in s]
+        # A replication that has no value for the metric (missing, or NaN
+        # because nothing was observed) is left out; ``n`` reports how many
+        # replications the summary rests on.
+        return [s[metric] for s in snapshots if metric in s and math.isfinite(s[metric])]
 
     def _precision_met(
         self,
@@ -186,6 +188,8 @@ class ReplicationRunner:
             if len(vals) < 2:
                 return False
             ci = ci_t(vals, alpha)
+            if not (math.isfinite(ci.mean) and math.isfinite(ci.half_width)):
+                return False
             mu = abs(ci.mean)
             if mu == 0.0:
                 # If mean is zero, check absolute half-width instead
@@ -197,8 +201,9 @@ class ReplicationRunner:
         return True
 
     def _build_report(
-        self, snapshots: list[Snapshot], stop_reason: str
+        self, snapshots: list[Snapshot], stop_reason: str, alpha: float | None = None
     ) -> ReplicationReport:
+        alpha = alpha if alpha is not None else self._alpha
         if not snapshots:
             return ReplicationReport(
                 snapshots=[],
@@ -225,13 +230,13 @@ class ReplicationRunner:
                 metric_summary[k] = {
                     "n": float(len(vals)),
                     "mean": mu,
-                    "stdev": 0.0,
+                    "stdev": float("nan"),
                     "half_width": float("nan"),
                     "lower": float("nan"),
                     "upper": float("nan"),
                 }
             else:
-                ci = ci_t(vals, self._alpha)
+                ci = ci_t(vals, alpha)
                 import statistics as _stats
                 metric_summary[k] = {
                     "n": float(len(vals)),

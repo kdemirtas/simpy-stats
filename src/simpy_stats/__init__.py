@@ -23,14 +23,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .core.counter import Counter
-from .core.tally import Tally
 from .core.level import Level
+from .core.tally import Tally
 from .core.welford import Welford
+from .experiments.ci import ci_t, half_width_t
+from .experiments.replication import ReplicationReport, ReplicationRunner
+from .reporting.export import to_csv, to_json
 from .reporting.snapshot import Snapshot
 from .reporting.summary import summary_table
-from .reporting.export import to_csv, to_json
-from .experiments.ci import ci_t, half_width_t
-from .experiments.replication import ReplicationRunner, ReplicationReport
 from .simpy_integration import (
     MonitoredContainer,
     MonitoredResource,
@@ -78,8 +78,10 @@ class Stats:
         SimPy environment (used as the default time source for Level stats).
     """
 
-    def __init__(self, env: "simpy.Environment | None" = None) -> None:
+    def __init__(self, env: simpy.Environment | None = None) -> None:
         self._env = env
+        self._finalized = False
+        self._finalized_at: float | None = None
         self._tallies: dict[str, Tally] = {}
         self._counters: dict[str, Counter] = {}
         self._levels: dict[str, Level] = {}
@@ -121,19 +123,36 @@ class Stats:
     def finalize(self, t_end: float | None = None) -> Snapshot:
         """Close all Level segments and return a :class:`Snapshot`.
 
+        This ends the measurement: a Level takes no update afterwards.  A
+        ``Stats`` object measures one run, up to one end time.  Calling
+        ``finalize`` again with the same end time returns the same numbers;
+        with another end time it raises :exc:`RuntimeError`, because the
+        Levels would still describe the first window.
+
+        Each Level averages over its own window, from the moment it was
+        created to the end time.  Create every Level before the run starts
+        if they are to be compared.
+
         Parameters
         ----------
         t_end:
             End time of the simulation run.  Defaults to ``env.now`` when an
-            environment is attached, otherwise the last recorded level time.
+            environment is attached, otherwise each Level ends at its last
+            recorded change.
         """
         if t_end is None and self._env is not None:
             t_end = float(self._env.now)
+        if self._finalized and t_end != self._finalized_at:
+            raise RuntimeError(
+                f"finalize() was already called with end time {self._finalized_at}, "
+                f"now {t_end}: a Stats object measures one run."
+            )
+        self._finalized, self._finalized_at = True, t_end
 
         metrics: dict[str, float] = {}
 
         for lvl in self._levels.values():
-            lvl.finalize(t_end)
+            lvl.finalize(t_end if t_end is not None else lvl.last_t)
             metrics.update(lvl.snapshot())
 
         for tally in self._tallies.values():

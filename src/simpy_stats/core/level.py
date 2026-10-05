@@ -33,7 +33,7 @@ class Level:
     def __init__(
         self,
         name: str,
-        env: "simpy.Environment | None" = None,
+        env: simpy.Environment | None = None,
         initial: float = 0.0,
         start_time: float | None = None,
     ) -> None:
@@ -85,6 +85,11 @@ class Level:
     # ------------------------------------------------------------------
     # Accessors
     # ------------------------------------------------------------------
+
+    @property
+    def last_t(self) -> float:
+        """Time of the last recorded change (the creation time before any)."""
+        return self._integral.last_t
 
     @property
     def current(self) -> float:

@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 import simpy
 
+from .hooks import sync_on_cancel
+
 if TYPE_CHECKING:
     from ..core.level import Level
-    from ..reporting.snapshot import Snapshot
 
 
 class MonitoredResource(simpy.Resource):
@@ -41,8 +42,8 @@ class MonitoredResource(simpy.Resource):
     ) -> None:
         super().__init__(env, capacity)
         self._prefix = prefix
-        self._queue_level: "Level | None" = None
-        self._service_level: "Level | None" = None
+        self._queue_level: Level | None = None
+        self._service_level: Level | None = None
 
         if stats is not None:
             self._queue_level = stats.level(f"{prefix}.queue_len", initial=0)
@@ -61,6 +62,11 @@ class MonitoredResource(simpy.Resource):
     def _trigger_get(self, put_event):  # type: ignore[override]
         super()._trigger_get(put_event)
         self._sync_levels()
+
+    def request(self, *args, **kwargs):
+        request = super().request(*args, **kwargs)
+        sync_on_cancel(request, self._sync_levels)
+        return request
 
     def release(self, request):
         evt = super().release(request)

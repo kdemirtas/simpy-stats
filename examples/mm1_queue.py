@@ -19,7 +19,6 @@ import simpy
 import simpy_stats
 from simpy_stats import ReplicationRunner, Stats, summary_table
 
-
 # ---------------------------------------------------------------------------
 # M/M/1 simulation
 # ---------------------------------------------------------------------------

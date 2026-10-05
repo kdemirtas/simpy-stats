@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from .snapshot import Snapshot
 
 
-def to_csv(snapshots: "list[Snapshot] | Snapshot", file=None) -> str | None:
+def to_csv(snapshots: list[Snapshot] | Snapshot, file=None) -> str | None:
     """Serialize one or more snapshots to CSV.
 
     Parameters
@@ -48,7 +48,7 @@ def to_csv(snapshots: "list[Snapshot] | Snapshot", file=None) -> str | None:
 
 
 def to_json(
-    snapshots: "list[Snapshot] | Snapshot",
+    snapshots: list[Snapshot] | Snapshot,
     file=None,
     indent: int = 2,
 ) -> str | None:

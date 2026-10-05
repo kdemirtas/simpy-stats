@@ -1,10 +1,13 @@
 """Tests for Level and TimeIntegral."""
 
+import math
+
 import pytest
+import simpy
 
-from simpy_stats.core.time_integral import TimeIntegral
+import simpy_stats
 from simpy_stats.core.level import Level
-
+from simpy_stats.core.time_integral import TimeIntegral
 
 # ---------------------------------------------------------------------------
 # TimeIntegral
@@ -35,8 +38,8 @@ class TestTimeIntegral:
 
     def test_time_mean_at_zero_elapsed(self):
         ti = TimeIntegral(initial=5.0, start_time=0.0)
-        # Elapsed == 0 → returns the last value
-        assert ti.time_mean(t_end=0.0) == pytest.approx(5.0)
+        # A window of no length has no time average
+        assert math.isnan(ti.time_mean(t_end=0.0))
 
     def test_non_zero_start_time(self):
         # Level=2 from t=5 to t=15: elapsed=10, mean=2
@@ -138,3 +141,51 @@ class TestLevel:
     def test_repr(self):
         lvl = Level("q", initial=0.0)
         assert "Level" in repr(lvl)
+
+
+class TestStatsFinalize:
+    def test_two_updates_at_the_same_time_add_no_area(self):
+        ti = TimeIntegral(initial=0.0, start_time=0.0)
+        ti.update(5.0, 2.0)
+        ti.update(1.0, 2.0)
+        assert ti.time_mean(t_end=4.0) == pytest.approx(2 / 4)
+
+    def test_a_level_created_late_averages_over_its_own_window(self):
+        env = simpy.Environment()
+        stats = simpy_stats.Stats(env)
+        early = stats.level("early", initial=1)
+        env.run(until=10)
+        late = stats.level("late", initial=1)
+        early.update(0)
+        late.update(0)
+        env.run(until=20)
+        snap = stats.finalize()
+        assert snap["early.time_mean"] == pytest.approx(10 / 20)
+        assert math.isnan(snap["late.time_mean"]) is False
+        assert snap["late.time_mean"] == pytest.approx(0.0)
+
+    def test_finalize_twice_at_the_same_time_gives_the_same_numbers(self):
+        env = simpy.Environment()
+        stats = simpy_stats.Stats(env)
+        queue = stats.level("queue", initial=2)
+        env.run(until=10)
+        assert stats.finalize()["queue.time_mean"] == stats.finalize()["queue.time_mean"] == 2
+        with pytest.raises(RuntimeError):
+            queue.update(3)
+
+    def test_finalize_again_at_a_later_time_is_refused(self):
+        env = simpy.Environment()
+        stats = simpy_stats.Stats(env)
+        stats.level("queue", initial=2)
+        env.run(until=10)
+        stats.finalize()
+        env.run(until=20)
+        with pytest.raises(RuntimeError):
+            stats.finalize()
+
+    def test_finalize_without_env_ends_each_level_at_its_last_change(self):
+        stats = simpy_stats.Stats()
+        queue = stats.level("queue", initial=0)
+        queue.update(4, t=5)
+        queue.update(0, t=10)
+        assert stats.finalize()["queue.time_mean"] == pytest.approx(20 / 10)

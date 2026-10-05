@@ -1,4 +1,4 @@
-"""Confidence-interval utilities (t-based with optional scipy fallback)."""
+"""Confidence-interval utilities (t-based, standard library only)."""
 
 from __future__ import annotations
 
@@ -15,73 +15,73 @@ class CIResult(NamedTuple):
 
 
 # ---------------------------------------------------------------------------
-# t-critical-value table (two-tailed, alpha=0.05 and alpha=0.10)
-# Covers df 1..120 + inf.  Generated once at module import.
+# Student t quantile, standard library only
 # ---------------------------------------------------------------------------
 
-# Sparse lookup for common cases; we interpolate for missing df.
-_T_TABLE_05: dict[int, float] = {
-    1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
-    6: 2.447,  7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
-    11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131,
-    16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
-    25: 2.060, 30: 2.042, 40: 2.021, 60: 2.000, 120: 1.980,
-}
-_T_TABLE_10: dict[int, float] = {
-    1: 6.314, 2: 2.920, 3: 2.353, 4: 2.132, 5: 2.015,
-    6: 1.943, 7: 1.895, 8: 1.860, 9: 1.833, 10: 1.812,
-    11: 1.796, 12: 1.782, 13: 1.771, 14: 1.761, 15: 1.753,
-    16: 1.746, 17: 1.740, 18: 1.734, 19: 1.729, 20: 1.725,
-    25: 1.708, 30: 1.697, 40: 1.684, 60: 1.671, 120: 1.658,
-}
 
-_ALPHA_TO_TABLE: dict[float, dict[int, float]] = {
-    0.05: _T_TABLE_05,
-    0.10: _T_TABLE_10,
-}
+def _incomplete_beta(a: float, b: float, x: float) -> float:
+    """Regularized incomplete beta function I_x(a, b), by continued fraction."""
+    if x <= 0.0:
+        return 0.0
+    if x >= 1.0:
+        return 1.0
+    if x > (a + 1.0) / (a + b + 2.0):
+        return 1.0 - _incomplete_beta(b, a, 1.0 - x)
+    log_front = (
+        math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+        + a * math.log(x) + b * math.log1p(-x)
+    )
+    tiny = 1e-300
+    c = 1.0
+    d = 1.0 - (a + b) * x / (a + 1.0)
+    d = 1.0 / (d if abs(d) > tiny else tiny)
+    fraction = d
+    for m in range(1, 500):
+        for numerator in (
+            m * (b - m) * x / ((a + 2 * m - 1.0) * (a + 2 * m)),
+            -(a + m) * (a + b + m) * x / ((a + 2 * m) * (a + 2 * m + 1.0)),
+        ):
+            d = 1.0 + numerator * d
+            d = 1.0 / (d if abs(d) > tiny else tiny)
+            c = 1.0 + numerator / c
+            c = c if abs(c) > tiny else tiny
+            fraction *= d * c
+        if abs(d * c - 1.0) < 1e-15:
+            break
+    return math.exp(log_front) * fraction / a
 
-_NORMAL_APPROX: dict[float, float] = {0.05: 1.960, 0.10: 1.645}
+
+def _t_two_tail(t: float, df: int) -> float:
+    """P(|T| > t) for Student's t with *df* degrees of freedom, t >= 0."""
+    return _incomplete_beta(df / 2.0, 0.5, df / (df + t * t))
 
 
 def _t_critical(df: int, alpha: float = 0.05) -> float:
     """Return the two-tailed t critical value for *df* degrees of freedom.
 
-    Uses scipy.stats.t.ppf when scipy is available; otherwise falls back to a
-    built-in table with linear interpolation, then to the normal approximation
-    for large df.
+    The value t with P(|T| > t) = alpha, found by bisection on the exact
+    distribution.  No table and no scipy: the same number on every machine,
+    for any ``0 < alpha < 1`` and any ``df >= 1``.
     """
-    try:
-        from scipy.stats import t as _t_dist  # type: ignore[import]
-
-        return float(_t_dist.ppf(1.0 - alpha / 2.0, df))
-    except ImportError:
-        pass
-
-    table = _ALPHA_TO_TABLE.get(alpha)
-    if table is None:
-        # Fall through to normal approximation
-        z = _NORMAL_APPROX.get(alpha)
-        if z is None:
-            # Last resort: use 1.96 for alpha=0.05 vicinity
-            z = -math.log(alpha / 2.0) ** 0.5 * 1.4  # rough approximation
-        return z
-
-    # Find bracketing keys
-    keys = sorted(table.keys())
-    if df <= keys[0]:
-        return table[keys[0]]
-    if df >= keys[-1]:
-        # Use normal approximation for very large df
-        return _NORMAL_APPROX.get(alpha, 1.960)
-
-    lo = max(k for k in keys if k <= df)
-    hi = min(k for k in keys if k >= df)
-    if lo == hi:
-        return table[lo]
-
-    # Linear interpolation
-    frac = (df - lo) / (hi - lo)
-    return table[lo] + frac * (table[hi] - table[lo])
+    if df < 1:
+        raise ValueError(f"df must be at least 1, got {df}")
+    if not 0.0 < alpha < 1.0:
+        raise ValueError(
+            f"alpha is the significance level and must be between 0 and 1, got {alpha}"
+            " (0.05 gives a 95 % interval)"
+        )
+    low, high = 0.0, 1.0
+    while _t_two_tail(high, df) > alpha:
+        high *= 2.0
+    for _ in range(200):
+        middle = (low + high) / 2.0
+        if _t_two_tail(middle, df) > alpha:
+            low = middle
+        else:
+            high = middle
+        if high - low <= 1e-13 * high:
+            break
+    return (low + high) / 2.0
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +97,8 @@ def ci_t(values: list[float], alpha: float = 0.05) -> CIResult:
     values:
         Sample of independent replication outputs for a single metric.
     alpha:
-        Significance level (default 0.05 → 95 % CI).
+        Significance level, not the confidence level: 0.05 gives a 95 % CI
+        (the default), 0.10 a 90 % CI.  Must be between 0 and 1.
 
     Returns
     -------
@@ -107,7 +108,7 @@ def ci_t(values: list[float], alpha: float = 0.05) -> CIResult:
     Raises
     ------
     ValueError
-        If fewer than 2 values are supplied.
+        If fewer than 2 values are supplied, or alpha is not between 0 and 1.
     """
     n = len(values)
     if n < 2:

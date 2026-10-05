@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
 
 class Snapshot:
@@ -63,7 +63,7 @@ class Snapshot:
         """Return a plain copy of the metrics dict."""
         return dict(self._metrics)
 
-    def prefix(self, p: str) -> "Snapshot":
+    def prefix(self, p: str) -> Snapshot:
         """Return a new Snapshot with all keys prefixed by *p* + '.'."""
         return Snapshot({f"{p}.{k}": v for k, v in self._metrics.items()}, self.meta)
 

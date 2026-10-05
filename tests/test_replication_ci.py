@@ -1,16 +1,13 @@
 """Tests for CI utilities and ReplicationRunner."""
 
-import math
-import statistics
 
 import pytest
-
 import simpy
+
 import simpy_stats
-from simpy_stats.experiments.ci import ci_t, half_width_t, _t_critical
+from simpy_stats.experiments.ci import _t_critical, ci_t, half_width_t
 from simpy_stats.experiments.replication import ReplicationRunner
 from simpy_stats.reporting.snapshot import Snapshot
-
 
 # ---------------------------------------------------------------------------
 # CI utilities
@@ -173,3 +170,73 @@ class TestStats:
         stats = simpy_stats.Stats()
         stats.tally("x")
         assert "Stats" in repr(stats)
+
+
+T_VALUES = {
+    (1, 0.05): 12.7062047, (4, 0.05): 2.7764451, (9, 0.05): 2.2621572,
+    (29, 0.05): 2.0452296, (120, 0.05): 1.9799304, (150, 0.05): 1.9759053,
+    (1000, 0.05): 1.9623391, (9, 0.01): 3.2498355, (4, 0.10): 2.1318468,
+    (2, 0.001): 31.5990546, (30, 0.5): 0.6827557,
+}
+
+
+@pytest.mark.parametrize(("df", "alpha"), list(T_VALUES))
+def test_t_critical_matches_the_exact_quantile(df, alpha):
+    assert _t_critical(df, alpha) == pytest.approx(T_VALUES[(df, alpha)], abs=2e-6)
+
+
+def test_t_critical_takes_an_alpha_that_is_not_a_round_float():
+    assert _t_critical(9, 1 - 0.95) == pytest.approx(2.2621572, abs=2e-6)
+
+
+@pytest.mark.parametrize("alpha", [0.0, 1.0, 1.5, -0.1])
+def test_alpha_outside_zero_and_one_is_refused(alpha):
+    with pytest.raises(ValueError):
+        ci_t([1.0, 2.0, 3.0], alpha)
+
+
+def test_ci_t_on_a_worked_sample():
+    # mean 3, stdev sqrt(2.5), n 5: half width 2.7764451 * sqrt(2.5 / 5)
+    result = ci_t([1.0, 2.0, 3.0, 4.0, 5.0])
+    assert result.mean == pytest.approx(3.0)
+    assert result.half_width == pytest.approx(1.9632432, abs=1e-6)
+
+
+def _fixed_snapshots(values):
+    values = iter(values)
+    return lambda seed: Snapshot({"wait.mean": next(values), "served.count": 1.0})
+
+
+def test_a_replication_without_observations_is_left_out_of_the_summary():
+    nan = float("nan")
+    runner = ReplicationRunner(_fixed_snapshots([4.0, nan, 6.0, nan, 5.0]))
+    report = runner.run(5)
+    assert report.metric_summary["wait.mean"]["n"] == 3
+    assert report.metric_summary["wait.mean"]["mean"] == pytest.approx(5.0)
+    assert report.metric_summary["served.count"]["n"] == 5
+
+
+def test_precision_is_not_reached_on_a_metric_that_has_no_values():
+    nan = float("nan")
+    runner = ReplicationRunner(_fixed_snapshots([nan] * 8))
+    report = runner.run_until_precision(["wait.mean"], min_reps=3, max_reps=8)
+    assert report.stop_reason == "max reps reached"
+    assert report.n_reps == 8
+
+
+def test_the_report_uses_the_alpha_of_the_stopping_rule():
+    values = [10.0, 11.0, 9.0, 10.5, 9.5, 10.2, 9.8, 10.1, 9.9, 10.0]
+    runner = ReplicationRunner(_fixed_snapshots(values), alpha=0.05)
+    report = runner.run_until_precision(
+        ["wait.mean"], alpha=0.10, rel_half_width=0.5, min_reps=10, max_reps=10
+    )
+    assert report.metric_summary["wait.mean"]["half_width"] == pytest.approx(
+        half_width_t(values, 0.10)
+    )
+
+
+def test_a_metric_seen_in_one_replication_has_no_spread():
+    report = ReplicationRunner(_fixed_snapshots([7.0])).run(1)
+    summary = report.metric_summary["wait.mean"]
+    assert summary["mean"] == 7.0
+    assert summary["stdev"] != summary["stdev"]  # NaN
