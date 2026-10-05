@@ -67,7 +67,7 @@ print(simpy_stats.summary_table(report))
 ### Automatic resource monitoring
 
 ```python
-from simpy_stats.simpy_integration import MonitoredResource
+from simpy_stats import MonitoredResource
 
 server = MonitoredResource(env, capacity=1, stats=stats, prefix="server")
 # server.queue_len and server.in_service Levels are updated automatically

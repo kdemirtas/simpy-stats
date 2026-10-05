@@ -1,10 +1,11 @@
 [project]
 name = "simpy-stats"
-version = "0.1.0"
+version = "0.2.0"
 description = "Arena-like statistics layer for SimPy: Counter, Tally, Level, replications, and CI."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Kerem Demirtas" }]
 keywords = ["simpy", "simulation", "statistics", "discrete-event"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -20,6 +21,10 @@ classifiers = [
 dependencies = [
     "simpy>=4.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/kdemirtas/simpy-stats"
+Issues = "https://github.com/kdemirtas/simpy-stats/issues"
 
 [project.optional-dependencies]
 scipy = ["scipy>=1.10"]
