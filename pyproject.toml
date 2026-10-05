@@ -19,7 +19,10 @@ classifiers = [
 ]
 
 dependencies = [
-    "simpy>=4.0",
+    # The monitored classes override private SimPy methods (_trigger_put,
+    # _trigger_get, _do_put, _do_get) and patch Request.cancel. Widen this
+    # range only after the tests pass on the new SimPy release.
+    "simpy>=4.1,<4.2",
 ]
 
 [project.urls]

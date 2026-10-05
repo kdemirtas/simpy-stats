@@ -14,6 +14,8 @@ Arena-like statistics layer for [SimPy](https://simpy.readthedocs.io/): streamin
 
 ## Installation
 
+Works with SimPy 4.1 (tested on 4.1.0, 4.1.1 and 4.1.2).
+
 ```bash
 pip install simpy-stats
 ```
@@ -93,6 +95,7 @@ Other changes:
 - `Tally.observe` and `Welford.update` refuse NaN and infinity.
 - `Stats.finalize()` ends the measurement. A second call with another end time raises `RuntimeError`. Without an environment and without `t_end`, each Level ends at its last recorded change.
 - `alpha` is checked to be between 0 and 1 (it is the significance level: 0.05 gives a 95 % interval).
+- SimPy is required as `>=4.1,<4.2` (it was `>=4.0`). The monitored classes extend SimPy's own resource classes through private methods, so the package is tied to the SimPy releases its tests ran on: 4.1.0, 4.1.1 and 4.1.2.
 
 ## Development
 
