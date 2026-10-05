@@ -61,6 +61,10 @@ def attach_resource_monitors(
     _orig_request = resource.request
 
     def _sync() -> None:
+        # A process that is still alive when the run stops leaves its ``with``
+        # block when Python discards it, after the Levels are closed.
+        if queue_lvl.finalized:
+            return
         queue_lvl.update(len(resource.queue), float(env.now))
         service_lvl.update(resource.count, float(env.now))
 

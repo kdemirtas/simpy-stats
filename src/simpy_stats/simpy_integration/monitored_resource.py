@@ -79,6 +79,10 @@ class MonitoredResource(simpy.Resource):
 
     def _sync_levels(self) -> None:
         t = float(self._env.now)
+        # A process that is still alive when the run stops leaves its ``with``
+        # block when Python discards it, after the Levels are closed.
+        if self._queue_level is None or self._queue_level.finalized:
+            return
         if self._queue_level is not None:
             self._queue_level.update(len(self.queue), t)
         if self._service_level is not None:
