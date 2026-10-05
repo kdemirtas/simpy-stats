@@ -87,6 +87,11 @@ class Level:
     # ------------------------------------------------------------------
 
     @property
+    def finalized(self) -> bool:
+        """True once :meth:`finalize` has closed the Level."""
+        return self._finalized
+
+    @property
     def last_t(self) -> float:
         """Time of the last recorded change (the creation time before any)."""
         return self._integral.last_t

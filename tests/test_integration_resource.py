@@ -271,3 +271,28 @@ def test_attached_monitors_follow_a_preemptive_resource():
     assert env.now == 10
     assert snap["server.queue_len.time_mean"] == pytest.approx(0.0)
     assert snap["server.in_service.time_mean"] == pytest.approx(7 / 10)
+
+
+@pytest.mark.parametrize("attached", [False, True])
+def test_a_request_left_open_at_the_end_of_the_run_is_cancelled_quietly(attached):
+    env = simpy.Environment()
+    stats = simpy_stats.Stats(env)
+    if attached:
+        server = simpy.Resource(env, capacity=1)
+        simpy_stats.attach_resource_monitors(server, stats, prefix="server")
+    else:
+        server = simpy_stats.MonitoredResource(env, capacity=1, stats=stats, prefix="server")
+    def customer():
+        with server.request() as turn:
+            yield turn
+            yield env.timeout(10)
+
+    processes = [env.process(customer()), env.process(customer())]
+    env.run(until=5)
+    snap = stats.finalize()
+    # what Python does to a process that is still alive when the model is
+    # dropped: it closes the generator, which leaves the ``with`` block
+    for process in processes:
+        process._generator.close()
+    assert snap["server.queue_len.time_mean"] == pytest.approx(1.0)
+    assert stats.finalize()["server.queue_len.time_mean"] == pytest.approx(1.0)
