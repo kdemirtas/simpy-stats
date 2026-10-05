@@ -52,21 +52,15 @@ class MonitoredResource(simpy.Resource):
     # Override SimPy hooks
     # ------------------------------------------------------------------
 
-    def _do_put(self, event):  # type: ignore[override]
-        # A new request arrives → queue might grow
-        result = super()._do_put(event)
+    def _trigger_put(self, get_event):  # type: ignore[override]
+        # SimPy removes a granted request from the queue only after ``_do_put``
+        # returns, so the queue is read here, once the whole pass is over.
+        super()._trigger_put(get_event)
         self._sync_levels()
-        return result
 
-    def _do_get(self, event):  # type: ignore[override]
-        result = super()._do_get(event)
+    def _trigger_get(self, put_event):  # type: ignore[override]
+        super()._trigger_get(put_event)
         self._sync_levels()
-        return result
-
-    def request(self):
-        evt = super().request()
-        # We can't intercept the exact moment of granting here; _do_put covers it.
-        return evt
 
     def release(self, request):
         evt = super().release(request)

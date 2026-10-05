@@ -31,6 +31,12 @@ from .reporting.summary import summary_table
 from .reporting.export import to_csv, to_json
 from .experiments.ci import ci_t, half_width_t
 from .experiments.replication import ReplicationRunner, ReplicationReport
+from .simpy_integration import (
+    MonitoredContainer,
+    MonitoredResource,
+    MonitoredStore,
+    attach_resource_monitors,
+)
 
 if TYPE_CHECKING:
     import simpy
@@ -53,9 +59,14 @@ __all__ = [
     "half_width_t",
     "ReplicationRunner",
     "ReplicationReport",
+    # SimPy integration
+    "MonitoredResource",
+    "MonitoredStore",
+    "MonitoredContainer",
+    "attach_resource_monitors",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 class Stats:

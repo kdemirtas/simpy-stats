@@ -124,3 +124,56 @@ class TestExport:
         table = simpy_stats.summary_table(snap)
         assert "wait.mean" in table
         assert "2.5" in table
+
+
+def test_monitored_classes_are_exported_at_the_top_level():
+    import simpy_stats
+    from simpy_stats import simpy_integration
+
+    for name in (
+        "MonitoredResource",
+        "MonitoredStore",
+        "MonitoredContainer",
+        "attach_resource_monitors",
+    ):
+        assert getattr(simpy_stats, name) is getattr(simpy_integration, name)
+        assert name in simpy_stats.__all__
+
+
+PLACED_AT = {1: 0, 2: 2, 3: 3, 4: 14, 5: 15}
+SERVICE_TIME = {1: 4, 2: 3, 3: 5, 4: 2, 5: 3}
+
+
+def _five_customers(env, server):
+    """One server, five customers who wait 0, 2, 4, 0 and 1: the run ends at 19."""
+
+    def customer(number):
+        yield env.timeout(PLACED_AT[number])
+        with server.request() as turn:
+            yield turn
+            yield env.timeout(SERVICE_TIME[number])
+
+    for number in PLACED_AT:
+        env.process(customer(number))
+    env.run()
+
+
+def test_monitored_resource_queue_length_counts_only_waiting_requests():
+    env = simpy.Environment()
+    stats = simpy_stats.Stats(env)
+    server = simpy_stats.MonitoredResource(env, capacity=1, stats=stats, prefix="server")
+    _five_customers(env, server)
+    snap = stats.finalize()
+    assert snap["server.queue_len.time_mean"] == pytest.approx(7 / 19)
+    assert snap["server.in_service.time_mean"] == pytest.approx(17 / 19)
+
+
+def test_attached_monitors_queue_length_counts_only_waiting_requests():
+    env = simpy.Environment()
+    stats = simpy_stats.Stats(env)
+    server = simpy.Resource(env, capacity=1)
+    simpy_stats.attach_resource_monitors(server, stats, prefix="server")
+    _five_customers(env, server)
+    snap = stats.finalize()
+    assert snap["server.queue_len.time_mean"] == pytest.approx(7 / 19)
+    assert snap["server.in_service.time_mean"] == pytest.approx(17 / 19)
